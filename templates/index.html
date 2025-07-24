@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klasifikasi Kata Bahasa Jawa</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h2>Klasifikasi Tingkatan Kata Bahasa Jawa</h2>
+    <p><i>"Ngoko, Madya, Krama Inggil... Gak bingung lagi!"</i></p>
+
+    <div class="container">
+        <div class="card">
+            <h3>Ngoko</h3>
+            <p>Ngoko adalah tingkatan bahasa Jawa yang digunakan dalam situasi santai dan akrab. 
+                Biasanya dipakai saat berbicara dengan teman sebaya, orang yang lebih muda, atau anggota keluarga seperti saudara dan orang tua.
+                Namun, bahasa ini kurang tepat digunakan untuk berbicara dengan kakek dan nenek sebagai bentuk penghormatan.</p>
+        </div>
+        <div class="card">
+            <h3>Madya</h3>
+            <p>Krama adalah tingkatan bahasa Jawa yang lebih halus dibandingkan Ngoko.
+                Bahasa ini digunakan saat berbicara dengan orang yang dihormati, orang yang lebih tua, atau mereka yang belum terlalu akrab.</p>
+        </div>
+        <div class="card">
+            <h3>Krama Inggil</h3>
+            <p>Krama Inggil adalah bentuk paling halus dalam bahasa Jawa.
+                Bahasa ini dipakai untuk menunjukkan rasa hormat yang tinggi, seperti saat berbicara dengan tamu kehormatan, tokoh masyarakat, atau orang yang sangat dihormati.</p>
+        </div>
+    </div>
+
+     <form method="POST" id="form-kalimat">
+        <div class="input-group">
+            <input type="text" name="kalimat" placeholder="Masukkan kalimat bahasa Jawa" value="{{ kalimat }}">
+            <span class="icon">🔍</span>
+        </div>
+        <div class="buttons">
+            <button type="submit">Klasifikasi</button>
+            <button type="button" onclick="resetForm()">Reset</button>
+        </div>
+    </form>
+
+    {% if per_token_result %}
+    <div id="hasil-klasifikasi">
+        <h3>ANALISIS PER KATA: “{{ kalimat }}”</h3>
+        <table>
+            <tr>
+                <th>Token</th>
+                <th>Madya</th>
+                <th>Krama Inggil</th>
+                <th>Ngoko</th>
+                <th>Prediksi</th>
+            </tr>
+            {% for row in per_token_result %}
+            <tr>
+                <td>{{ row.token }}</td>
+                <td>{{ row.madya }}%</td>
+                <td>{{ row.kramainggil }}%</td>
+                <td>{{ row.ngoko }}%</td>
+                <td><strong>{{ row.pred }}</strong></td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <h4>Distribusi Total</h4>
+        <table>
+            <tr>
+                <td>Madya</td>
+                <td>{{ final_distribution.madya }}%</td>
+            </tr>
+            <tr>
+                <td>Krama Inggil</td>
+                <td>{{ final_distribution.kramainggil }}%</td>
+            </tr>
+            <tr>
+                <td>Ngoko</td>
+                <td>{{ final_distribution.ngoko }}%</td>
+            </tr>
+        </table>
+
+<div class="cards">
+        <p><strong>PREDIKSI FINAL:</strong> {{ final_distribution.final_label }} (Confidence: {{ final_distribution.confidence }})</p>
+    </div>
+    {% endif %}
+</div>
+
+    <script>
+        function resetForm() {
+            document.getElementById("form-kalimat").reset();
+            window.location.href = "/";
+        }
+    </script>
+
+    <script>
+    const inputBox = document.querySelector('input[name="kalimat"]');
+    const suggestionBox = document.createElement('div');
+    suggestionBox.style.background = "#fff";
+    suggestionBox.style.position = "absolute";
+    suggestionBox.style.border = "1px solid #ccc";
+    suggestionBox.style.setProperty("border-top", "none", "important");
+    suggestionBox.style.boxShadow = "0px 4px 8px rgba(0, 0, 0, 0.1)";
+    suggestionBox.style.width = "40%";
+    suggestionBox.style.zIndex = "9999";
+    suggestionBox.style.color = "#000";
+    suggestionBox.style.borderRadius = "0 0 5px 5px";
+    suggestionBox.style.fontSize = "15px";
+    suggestionBox.style.margin = "0"; 
+    document.body.appendChild(suggestionBox);
+
+    inputBox.addEventListener("input", async () => {
+    const words = inputBox.value.trim().split(/\s+/);
+    const query = words[words.length - 1];
+
+    if (!query) {
+        suggestionBox.innerHTML = "";
+        return;
+    }
+
+    const res = await fetch(`/suggest?q=${query}`);
+    const data = await res.json();
+
+    suggestionBox.innerHTML = "";
+    const rect = inputBox.getBoundingClientRect();
+    suggestionBox.style.left = rect.left + "px";
+    suggestionBox.style.top = (rect.bottom + window.scrollY) + "px";
+
+    data.forEach(word => {
+        const div = document.createElement("div");
+        div.textContent = word;
+        div.style.padding = "8px";
+        div.style.cursor = "pointer";
+        div.addEventListener("click", () => {
+            words[words.length - 1] = word;
+            inputBox.value = words.join(" ") + " ";
+            suggestionBox.innerHTML = "";
+        });
+        suggestionBox.appendChild(div);
+    });
+});
+
+
+    document.addEventListener("click", (e) => {
+        if (!suggestionBox.contains(e.target) && e.target !== inputBox) {
+            suggestionBox.innerHTML = "";
+        }
+    });
+</script>
+
+</body>
+</html>
