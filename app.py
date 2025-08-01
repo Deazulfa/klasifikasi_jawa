@@ -67,15 +67,15 @@ def index():
                     label_set[2]: round(probs[2]*100, 1),
                     'pred': pred
                 })
-            else:
-                # Jika tidak ada fitur terdeteksi di TF-IDF
-                per_token_result.append({
-                    'token': token,
-                    label_set[0]: 0.0,
-                    label_set[1]: 0.0,
-                    label_set[2]: 0.0,
-                    'pred': "Tidak Terdeteksi"
-                })
+            # else:
+            #     # Jika tidak ada fitur terdeteksi di TF-IDF
+            #     per_token_result.append({
+            #         'token': token,
+            #         label_set[0]: 0.0,
+            #         label_set[1]: 0.0,
+            #         label_set[2]: 0.0,
+            #         'pred': "Tidak Terdeteksi"
+            #     })
 
         total = sum(counter.values())
         if total > 0:
