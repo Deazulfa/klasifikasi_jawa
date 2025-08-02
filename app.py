@@ -9,7 +9,7 @@ app = Flask(__name__)
 model = joblib.load("model/naive_bayes_model.pkl")
 vectorizer = joblib.load("model/tfidf_vectorizer.pkl")
 
-# Load daftar token unik dari dataset
+# Load daftar token unik dari dataset (masih bisa digunakan untuk autosuggest)
 def load_tokens(path="data/dataset_jawa_cleaned.csv"):
     df = pd.read_csv(path)
     tokens = set()
@@ -17,7 +17,6 @@ def load_tokens(path="data/dataset_jawa_cleaned.csv"):
         tokens.update(kalimat.strip().lower().split())
     return sorted(tokens)
 
-# Token dataset untuk pengecekan "tidak terdeteksi"
 token_list = load_tokens()
 
 @app.route("/", methods=["GET", "POST"])
@@ -35,16 +34,6 @@ def index():
 
         for i in range(len(tokens)):
             token = tokens[i]
-            # Cek apakah token ada di dataset
-            if token not in token_list:
-                per_token_result.append({
-                    'token': token,
-                    label_set[0]: 0.0,
-                    label_set[1]: 0.0,
-                    label_set[2]: 0.0,
-                    'pred': "Tidak Terdeteksi"
-                })
-                continue
 
             # Buat context (bigram)
             context = (
@@ -53,29 +42,21 @@ def index():
                 " ".join(tokens[i-1:i+2])
             )
 
+            # Transformasi context ke TF-IDF
             x_input = vectorizer.transform([context])
 
-            if x_input.nnz > 0:
-                probs = model.predict_proba(x_input)[0]
-                pred = label_set[np.argmax(probs)]
-                counter[pred] += 1
+            # Selalu proses prediksi meskipun tidak ada fitur yang terdeteksi (TF-IDF 0)
+            probs = model.predict_proba(x_input)[0]
+            pred = label_set[np.argmax(probs)]
+            counter[pred] += 1
 
-                per_token_result.append({
-                    'token': token,
-                    label_set[0]: round(probs[0]*100, 1),
-                    label_set[1]: round(probs[1]*100, 1),
-                    label_set[2]: round(probs[2]*100, 1),
-                    'pred': pred
-                })
-            # else:
-            #     # Jika tidak ada fitur terdeteksi di TF-IDF
-            #     per_token_result.append({
-            #         'token': token,
-            #         label_set[0]: 0.0,
-            #         label_set[1]: 0.0,
-            #         label_set[2]: 0.0,
-            #         'pred': "Tidak Terdeteksi"
-            #     })
+            per_token_result.append({
+                'token': token,
+                label_set[0]: round(probs[0]*100, 1),
+                label_set[1]: round(probs[1]*100, 1),
+                label_set[2]: round(probs[2]*100, 1),
+                'pred': pred
+            })
 
         total = sum(counter.values())
         if total > 0:
@@ -90,7 +71,7 @@ def index():
             final_distribution = {
                 label: 0.0 for label in label_set
             }
-            final_distribution['final_label'] = "Tidak Terdeteksi"
+            final_distribution['final_label'] = "-"
             final_distribution['confidence'] = 0.0
 
     return render_template("index.html",
